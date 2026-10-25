@@ -1,0 +1,179 @@
+{
+  "name": "Daily Slack digest of Travel Code approvals and invoices due",
+  "nodes": [
+    {
+      "id": "0ecbbf5c-2dab-40bd-a776-16bf2ad6f7ad",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ],
+      "parameters": {
+        "width": 420,
+        "height": 560,
+        "content": "## Daily Slack digest: Travel Code approvals and invoices\n\nEvery weekday morning this workflow posts one Slack message with:\n- requests waiting for **your** approval in Travel Code (trips changes, expenses, expense reports, card requests\u2026)\n- invoices that are unpaid and due within 7 days\n\n### Setup\n1. Install the community node `n8n-nodes-travelcode`.\n2. Create a **Travel Code OAuth2 API** credential (see the node README for the client ID) and select it in both Travel Code nodes.\n3. Connect Slack and pick the channel in **Post to Slack**.\n4. Adjust the time in **Every weekday at 9:00**.\n\n### Customize\n- Change the 7-day window in **Build message**.\n- Remove **Get invoices** if the connected user has no access to invoices."
+      }
+    },
+    {
+      "id": "55c73f42-c015-4006-b0f8-d0ec1495ac6d",
+      "name": "Every weekday at 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2a8f0163-6c1d-4b5d-8d14-265e9d716c24",
+      "name": "Get pending approvals",
+      "type": "n8n-nodes-travelcode.travelCode",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "approval",
+        "operation": "getAll",
+        "scope": "active",
+        "returnAll": true,
+        "filters": {
+          "role": "approver"
+        }
+      },
+      "credentials": {
+        "travelCodeOAuth2Api": {
+          "id": "",
+          "name": "Travel Code account"
+        }
+      }
+    },
+    {
+      "id": "a794e216-b81f-4522-a0aa-12e2139615e2",
+      "name": "Get invoices",
+      "type": "n8n-nodes-travelcode.travelCode",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "parameters": {
+        "resource": "invoice",
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "credentials": {
+        "travelCodeOAuth2Api": {
+          "id": "",
+          "name": "Travel Code account"
+        }
+      }
+    },
+    {
+      "id": "066c3def-f06e-4e9b-9282-59c12d7544eb",
+      "name": "Build message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        0
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "jsCode": "const approvals = $('Get pending approvals').all().map(i => i.json).filter(a => a && a.id);\nconst invoices = $('Get invoices').all().map(i => i.json).filter(inv => inv && inv.id);\n\nconst dueSoon = invoices\n  .filter(inv => Number(inv.toPay) > 0 && inv.dueInDays !== null && inv.dueInDays <= 7)\n  .sort((a, b) => a.dueInDays - b.dueInDays);\n\nconst lines = [];\nlines.push(`*Travel Code daily digest*`);\nlines.push('');\nlines.push(`:hourglass: *${approvals.length} request(s) waiting for your approval*`);\nfor (const a of approvals.slice(0, 10)) {\n  lines.push(`\u2022 ${a.typeLabel} from ${a.requester?.name ?? 'unknown'} \u2014 ${a.createdAt}`);\n}\nlines.push('');\nlines.push(`:receipt: *${dueSoon.length} invoice(s) due within 7 days*`);\nfor (const inv of dueSoon.slice(0, 10)) {\n  const when = inv.dueInDays < 0 ? `overdue ${-inv.dueInDays} d` : `due in ${inv.dueInDays} d`;\n  lines.push(`\u2022 ${inv.number} \u2014 ${inv.toPay} ${inv.currency} (${when})`);\n}\nif (approvals.length === 0 && dueSoon.length === 0) {\n  lines.push('Nothing needs your attention today :tada:');\n}\nreturn [{ json: { text: lines.join('\\n') } }];"
+      }
+    },
+    {
+      "id": "f0b80805-afb5-48e2-bc84-5ea1808bc30d",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        920,
+        0
+      ],
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every weekday at 9:00": {
+      "main": [
+        [
+          {
+            "node": "Get pending approvals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get pending approvals": {
+      "main": [
+        [
+          {
+            "node": "Get invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get invoices": {
+      "main": [
+        [
+          {
+            "node": "Build message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build message": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

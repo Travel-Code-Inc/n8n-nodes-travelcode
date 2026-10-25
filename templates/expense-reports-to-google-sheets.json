@@ -1,0 +1,125 @@
+{
+  "name": "Log submitted Travel Code expense reports to Google Sheets",
+  "nodes": [
+    {
+      "id": "ce21385a-8ccd-4255-b45c-18acc5cd26d2",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "parameters": {
+        "width": 420,
+        "height": 500,
+        "content": "## Log submitted Travel Code expense reports to Google Sheets\n\nWhen an employee submits an expense report in Travel Code, this workflow adds a row to a Google Sheet: title, employee, period, and totals split into company-paid, to-reimburse and payroll deduction.\n\nUseful for finance teams that reconcile or approve in a spreadsheet, or as a log for accounting exports.\n\n### Setup\n1. Install the community node `n8n-nodes-travelcode`.\n2. Create a **Travel Code OAuth2 API** credential with a company admin or accountant account, so the trigger sees all employees' reports.\n3. Create a sheet with the header row: Report ID, Title, Employee, Order, Period, Company paid, To reimburse, Payroll deduction, Submitted at.\n4. Connect Google Sheets and pick the document and sheet in **Append to sheet**.\n5. Activate the workflow \u2014 reports submitted before activation are skipped."
+      }
+    },
+    {
+      "id": "24d87a40-ba7c-48a1-8c70-1ad77c7907e0",
+      "name": "Expense report submitted",
+      "type": "n8n-nodes-travelcode.travelCodeTrigger",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        0
+      ],
+      "parameters": {
+        "event": "expenseReportSubmitted",
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "travelCodeOAuth2Api": {
+          "id": "",
+          "name": "Travel Code account"
+        }
+      }
+    },
+    {
+      "id": "3b5c21f1-bbfd-4d0c-aae4-74bff86ef8ed",
+      "name": "Prepare row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r = $json;\nconst sum = (bucket) => Object.entries(r.totals?.[bucket] ?? {})\n  .map(([currency, amount]) => `${amount} ${currency}`).join(', ');\nreturn {\n  json: {\n    'Report ID': r.id,\n    'Title': r.title,\n    'Employee': r.employee?.name ?? '',\n    'Order': r.orderCode ?? '',\n    'Period': [r.dateFrom, r.dateTo].filter(Boolean).join(' \u2013 '),\n    'Company paid': sum('companyPaid'),\n    'To reimburse': sum('reimburse'),\n    'Payroll deduction': sum('payroll'),\n    'Submitted at': r.submittedAt,\n  },\n};"
+      }
+    },
+    {
+      "id": "65303de1-9c74-431b-a525-72a1da3025cc",
+      "name": "Append to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Expense report submitted": {
+      "main": [
+        [
+          {
+            "node": "Prepare row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare row": {
+      "main": [
+        [
+          {
+            "node": "Append to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
