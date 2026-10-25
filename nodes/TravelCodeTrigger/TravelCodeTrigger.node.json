@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-travelcode.travelCodeTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Productivity", "Finance & Accounting"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/Travel-Code-Inc/n8n-nodes-travelcode?tab=readme-ov-file#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/Travel-Code-Inc/n8n-nodes-travelcode?tab=readme-ov-file"
+			}
+		]
+	}
+}
