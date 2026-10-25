@@ -1,30 +1,33 @@
-import type { INodeType, INodeTypeDescription } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
+import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
+import { approvalDescription } from './resources/approval';
+import { expenseDescription } from './resources/expense';
+import { expenseReportDescription } from './resources/expenseReport';
+import { invoiceDescription } from './resources/invoice';
+import { orderDescription } from './resources/order';
+import { referenceDataDescription } from './resources/referenceData';
+import { travelerDescription } from './resources/traveler';
 
 export class TravelCode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Travel Code',
 		name: 'travelCode',
-		icon: 'file:travelcode.svg',
+		icon: { light: 'file:../../icons/travelcode.svg', dark: 'file:../../icons/travelcode.svg' },
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Interact with the Travel Code corporate travel platform',
+		description: 'Work with corporate trips, expenses and approvals in Travel Code',
 		defaults: {
 			name: 'Travel Code',
 		},
+		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
-		credentials: [
-			{
-				name: 'travelCodeOAuth2Api',
-				required: true,
-			},
-		],
+		credentials: [{ name: 'travelCodeOAuth2Api', required: true }],
 		requestDefaults: {
-			baseURL: 'https://api.travel-code.com',
+			baseURL: 'https://api.travel-code.com/v1',
 			headers: {
 				Accept: 'application/json',
+				'Content-Type': 'application/json',
 			},
 		},
 		properties: [
@@ -34,82 +37,41 @@ export class TravelCode implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{
-						name: 'Reference Data',
-						value: 'data',
-					},
-					{
-						name: 'User',
-						value: 'user',
-					},
+					{ name: 'Approval', value: 'approval' },
+					{ name: 'Expense', value: 'expense' },
+					{ name: 'Expense Report', value: 'expenseReport' },
+					{ name: 'Invoice', value: 'invoice' },
+					{ name: 'Order', value: 'order' },
+					{ name: 'Reference Data', value: 'data' },
+					{ name: 'Traveler', value: 'traveler' },
+					{ name: 'User', value: 'user' },
 				],
-				default: 'data',
+				default: 'order',
 			},
 			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['data'],
-					},
-				},
+				displayOptions: { show: { resource: ['user'] } },
 				options: [
 					{
-						name: 'List Airlines',
-						value: 'listAirlines',
-						action: 'List airlines',
-						description: 'Get the list of supported airlines (IATA, name)',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '/v1/data/airlines',
-							},
-						},
-					},
-					{
-						name: 'List Airports',
-						value: 'listAirports',
-						action: 'List airports',
-						description: 'Get the list of supported airports (IATA, city, country)',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '/v1/data/airports',
-							},
-						},
-					},
-				],
-				default: 'listAirports',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['user'],
-					},
-				},
-				options: [
-					{
-						name: 'Get Current User',
+						name: 'Get Current',
 						value: 'getCurrentUser',
-						action: 'Get current user',
-						description: 'Get the profile of the authenticated user',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '/v1/user/me',
-							},
-						},
+						action: 'Get the token owner',
+						description: 'Get the profile of the user the API token belongs to',
+						routing: { request: { method: 'GET', url: '/user/me' } },
 					},
 				],
 				default: 'getCurrentUser',
 			},
+			...approvalDescription,
+			...expenseDescription,
+			...expenseReportDescription,
+			...invoiceDescription,
+			...orderDescription,
+			...referenceDataDescription,
+			...travelerDescription,
 		],
-		usableAsTool: true,
 	};
 }

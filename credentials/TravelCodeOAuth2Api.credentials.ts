@@ -7,7 +7,7 @@ export class TravelCodeOAuth2Api implements ICredentialType {
 
 	displayName = 'Travel Code OAuth2 API';
 
-	icon: Icon = 'file:../nodes/TravelCode/travelcode.svg';
+	icon: Icon = { light: 'file:../icons/travelcode.svg', dark: 'file:../icons/travelcode.svg' };
 
 	documentationUrl = 'https://apidocs.travel-code.com';
 
@@ -34,7 +34,8 @@ export class TravelCodeOAuth2Api implements ICredentialType {
 			displayName: 'Scope',
 			name: 'scope',
 			type: 'hidden',
-			default: 'airports:read airlines:read flights:search flights:status flights:stats',
+			default:
+				'airports:read airlines:read flights:search flights:status flights:stats orders:read expenses:read approvals:read approvals:write invoices:read travelers:read',
 		},
 		{
 			displayName: 'Auth URI Query Parameters',
