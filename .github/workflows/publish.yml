@@ -3,7 +3,9 @@
 # Auth is npm Trusted Publishing (OIDC): no token is stored in this repository.
 # One-time setup on npmjs.com → n8n-nodes-travelcode → Settings → Trusted Publisher:
 #   GitHub Actions, owner Travel-Code-Inc, repository n8n-nodes-travelcode, workflow publish.yml.
-# Trusted Publishing needs npm 11.5.1 or newer, hence the npm upgrade step.
+# The trusted publisher is allowed `npm stage publish` only: the workflow stages the version and a
+# maintainer approves it with 2FA (npmjs.com → package → Staged versions, or `npm stage approve <id>`).
+# Trusted Publishing and staging need a recent npm, hence the npm upgrade step.
 
 name: Publish to npm
 
@@ -35,4 +37,4 @@ jobs:
 
       - run: npm run build
 
-      - run: npm publish --access public --provenance --ignore-scripts
+      - run: npm stage publish --access public --provenance --ignore-scripts
